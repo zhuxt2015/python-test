@@ -10,11 +10,13 @@ from email.mime.text import MIMEText
 from email.header import Header
 import smtplib
 import time
+import threading
 
 
-class BJGH(object):
+class BJGH(threading.Thread):
 
-    def __init__(self):
+    def __init__(self, url, name):
+        threading.Thread.__init__(self)
         self.domain = 'http://www.bjguahao.gov.cn'
         self.Agent = 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0'
         self.Referer = self.domain
@@ -32,15 +34,18 @@ class BJGH(object):
         # 暂停的时间间隔 秒
         self.interval = 60
         self.count = 1
+        self.appointUrl = url
+        self.officename = name
 
-    def start(self):
-        while (1 == 1):
+    def run(self):
+        count = 1
+        while 1:
             self.gh()
-            print '扫描 第%s次 时间: %s' % (self.count, time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
+            print '%s扫描 第%s次 时间: %s' % (self.officename, count, time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
             # print '协和 扫描 第%s次,%s'  ％  (self.count, time.strftime('%Y-%m-%d
             # %H:%M:%S', time.localtime))
-            time.sleep(3)
-            self.count = self.count + 1
+            time.sleep(2)
+            count += 1
 
     # 如果有号，发邮件
     def gh(self):
@@ -54,9 +59,9 @@ class BJGH(object):
             'yzm': "",
             'isAjax': "true"
         })
-        appointUrl = 'http://www.bjguahao.gov.cn/dpt/appoint/1-200004043.htm'
+        # appointUrl = 'http://www.bjguahao.gov.cn/dpt/appoint/1-200004043.htm'
         # appointUrl = 'http://www.bjguahao.gov.cn/dpt/appoint/163-200002327.htm'
-        html = self.getResponse(appointUrl)
+        html = self.getResponse(self.appointUrl)
         tds = re.findall(
             '<td.*?class="ksorder_kyy">.*?预约.*?value="(.*?)".*?</td>', html, re.S)
         if len(tds) > 0:
@@ -70,7 +75,8 @@ class BJGH(object):
 
     def sendEmail(self):
         # 第一个参数就是邮件正文，第二个参数是MIME的subtype，传入'plain'，最终的MIME就是'text/plain'，最后一定要用utf-8编码保证多语言兼容性
-        msg = MIMEText('有号了，快去挂号！！！！！', 'plain', 'utf-8')
+        emailContent = '%s有号了，快去挂号！！！！！' % self.officeName
+        msg = MIMEText(emailContent, 'plain', 'utf-8')
         msg['From'] = 'zxt362158@163.com <zxt362158@163.com>'
         msg['Subject'] = Header('北京挂号', 'utf-8').encode()
         msg['To'] = '594754793@qq.com <594754793@qq.com>'
@@ -89,5 +95,8 @@ class BJGH(object):
         server.quit()
 
         # 程序入口
-bjgh = BJGH()
-bjgh.start()
+thread1 = BJGH('http://www.bjguahao.gov.cn/dpt/appoint/1-200004043.htm', '男科')
+thread2 = BJGH(
+    'http://www.bjguahao.gov.cn/dpt/appoint/1-200004045.htm', '男科(西院)')
+thread1.start()
+thread2.start()
